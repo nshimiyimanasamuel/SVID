@@ -1,0 +1,890 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="description" content="SAVID is a community for sharing videos and joining creators.">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>SAVID — Watch and share videos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{--bg:#fff;--line:#e5e7eb;--text:#111827;--muted:#64748b;--red:#ff0033}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+header{height:64px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.topbar{padding:0 22px;display:grid;grid-template-columns:210px minmax(220px,650px) 1fr;gap:22px;align-items:center}
+.brand-area,.top-actions{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{font-size:25px;font-weight:950;letter-spacing:-1px;color:#111827;text-decoration:none}
+.logo span,footer b span{color:var(--red)}
+.icon-button{border:0;background:transparent;border-radius:50%;width:40px;height:40px;font-size:21px}
+.search-area{height:42px;display:flex;border:1px solid #c6c6c6;border-radius:24px;overflow:hidden}
+.search-area input{flex:1;min-width:0;border:0;outline:0;padding:0 17px;font-size:16px}
+.search-area button{width:60px;border:0;border-left:1px solid #ddd;background:#f8f8f8;font-size:24px}
+.top-actions{justify-content:flex-end}
+.upload-top{border:0;border-radius:22px;background:#f2f2f2;padding:10px 16px;font-weight:700}
+.account-pill{border:1px solid #ddd;border-radius:22px;background:#fff;padding:9px 13px;font-weight:650}
+.app-shell{max-width:none;margin:0;padding:0 22px 50px;display:grid;grid-template-columns:215px minmax(0,1fr);gap:22px}
+.left-sidebar{position:sticky;top:64px;height:calc(100vh - 70px);overflow:auto;padding:12px 5px}
+.side-link{display:block;padding:12px;border-radius:9px;text-decoration:none;color:#222;font-size:14px}
+.side-link:hover,.side-link.active{background:#f2f2f2}
+.side-heading{display:block;padding:17px 12px 6px}
+.side-divider{height:1px;background:#e5e5e5;margin:12px 0}
+.main-content{min-width:0}
+.category-row{height:62px;display:flex;align-items:center;gap:10px;overflow:auto;position:sticky;top:64px;background:white;z-index:5;white-space:nowrap}
+.category-chip{border:0;border-radius:8px;padding:9px 14px;background:#f2f2f2;font-weight:650}
+.category-chip.active{background:#111;color:white}
+.channels-section,.videos-section{margin:20px 0 30px}
+.section-title{display:flex;align-items:center;justify-content:space-between;margin:12px 0 18px}
+.section-title h2{font-size:20px;margin:0}
+.muted{color:var(--muted);font-size:13px}
+.channel-grid{display:flex;gap:16px;overflow-x:auto;padding-bottom:10px}
+.channel-card{flex:0 0 130px;text-align:center;padding:12px}
+.channel-avatar{width:68px;height:68px;border-radius:50%;background:#eee;color:#333;display:grid;place-items:center;margin:0 auto 9px;font-size:18px;font-weight:900}
+.channel-name{font-size:13px;font-weight:800;overflow-wrap:anywhere}
+.channel-meta{font-size:11px;color:var(--muted);margin-top:5px}
+.feed{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px 17px}
+.card{min-width:0;background:#fff}
+.video-card-player{width:100%;aspect-ratio:16/9;display:block;object-fit:contain;background:#111;border-radius:12px}
+.card-content{padding:10px 2px}
+.video-title{font-size:15px;line-height:1.4;font-weight:750;margin:5px 0 8px;overflow-wrap:anywhere}
+.video-creator-line{font-size:13px;color:var(--muted);margin-bottom:7px}
+.side-note{font-size:12px;color:var(--muted);line-height:1.6;overflow-wrap:anywhere}
+.video-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.action-btn{border:1px solid #e5e7eb;background:#f8fafc;border-radius:20px;padding:7px 11px;font-size:12px;font-weight:700;color:#222}
+.action-btn:hover{background:#eee}
+.action-btn.liked{background:#fff0f3;border-color:#ffb5c4;color:#d9002b}
+.interaction-info{font-size:12px;color:var(--muted);margin-top:8px}
+.comments-panel{display:none;margin-top:12px;padding:12px;background:#f8fafc;border-radius:10px}
+.comments-panel.open{display:block}
+.comment-list{max-height:220px;overflow:auto;margin:10px 0}
+.comment-item{padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px;overflow-wrap:anywhere}
+.comment-author{font-weight:700;margin-bottom:3px}
+.comment-form{display:flex;gap:7px}
+.comment-form input{min-width:0;flex:1;border:1px solid #d1d5db;border-radius:18px;padding:9px 12px}
+.comment-form button{border:0;border-radius:18px;padding:8px 13px;background:#111;color:#fff}
+.empty{padding:35px;text-align:center;color:var(--muted);border:1px dashed #cbd5e1;border-radius:15px;grid-column:1/-1}
+footer{border-top:1px solid var(--line);padding:24px 5%;display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-size:12px;margin-left:215px}
+footer b{color:#111}
+dialog{background:#fff;color:#111827;border:1px solid #e5e7eb;border-radius:16px;width:min(480px,calc(100% - 28px));padding:23px;box-shadow:0 20px 70px #0f172a30}
+dialog::backdrop{background:#0f172a80;backdrop-filter:blur(3px)}
+dialog h2{margin-top:0}
+.field{display:block;width:100%;background:#f8fafc;border:1px solid #dbe1e8;border-radius:9px;padding:11px;margin:7px 0 15px;color:#111827}
+.hint{font-size:12px;color:var(--muted);line-height:1.6}
+.btn{border:0;border-radius:22px;padding:10px 17px;background:var(--red);color:white;font-weight:750}
+.outline{background:white;border:1px solid #d1d5db;color:#111827}
+.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:12px}
+.upload-dialog{width:min(600px,calc(100% - 28px))}
+.btn:disabled{opacity:.6;cursor:wait}
+.upload-progress{margin-top:12px;font-size:13px;color:#475569;line-height:1.6}
+progress{width:100%;height:12px;accent-color:#ff0033}
+[hidden]{display:none!important}
+@media(max-width:1000px){
+.topbar{grid-template-columns:180px minmax(150px,1fr) auto;gap:10px}
+.app-shell{grid-template-columns:180px minmax(0,1fr)}
+.feed{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:650px){
+.topbar{height:58px;padding:0 9px;grid-template-columns:auto minmax(80px,1fr) auto;gap:6px}
+header{height:58px}.logo{font-size:20px}
+.search-area{height:36px}.search-area input{font-size:13px;padding:0 9px}
+.search-area button{width:35px}.top-actions{gap:4px}
+.upload-top{font-size:0;padding:9px 11px}
+.account-pill{font-size:10px;padding:8px}
+.app-shell{display:block;padding:0 12px 40px}
+.left-sidebar{display:none;position:fixed;z-index:20;top:58px;left:0;width:230px;background:#fff;height:calc(100vh - 58px);box-shadow:5px 0 20px #0002}
+.left-sidebar.open{display:block}
+.category-row{top:58px;height:54px;gap:7px}
+.category-chip{font-size:12px;padding:8px 11px}
+.channel-card{flex-basis:105px}.channel-avatar{width:58px;height:58px}
+.feed{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 10px}
+.video-title{font-size:13px}footer{margin-left:0}
+}
+@media(max-width:420px){.feed{grid-template-columns:1fr}}
+</style>
+</head>
+
+<body>
+<header class="topbar">
+  <div class="brand-area">
+    <button class="icon-button" id="sidebarToggle" type="button" aria-label="Open menu">☰</button>
+    <a class="logo" href="#home">SA<span>VID</span></a>
+  </div>
+  <form class="search-area" id="searchForm">
+    <input id="videoSearch" type="search" placeholder="Search videos">
+    <button type="submit" aria-label="Search">⌕</button>
+  </form>
+  <div class="top-actions">
+    <button class="upload-top" id="openUpload" type="button">＋ Create</button>
+    <button class="account-pill" id="loginButton" type="button">Sign in</button>
+    <button class="account-pill" id="createAccount" type="button">Create account</button>
+    <button class="account-pill" id="logoutButton" type="button" hidden>Logout</button>
+  </div>
+</header>
+
+<main id="home" class="app-shell">
+<aside class="left-sidebar" id="leftSidebar">
+  <a class="side-link active" href="#feed">⌂　Home</a>
+  <a class="side-link" href="#feed">▣　Videos</a>
+  <a class="side-link" href="#community">▤　Channels</a>
+  <div class="side-divider"></div>
+  <b class="side-heading">You　›</b>
+  <a class="side-link" href="#feed">◷　History</a>
+  <a class="side-link" href="#feed">▣　Your videos</a>
+  <a class="side-link" href="#community">♙　Your channel</a>
+  <div class="side-divider"></div>
+  <b class="side-heading">Explore</b>
+  <a class="side-link" href="#feed">♫　Music</a>
+  <a class="side-link" href="#feed">◉　Live</a>
+  <a class="side-link" href="#feed">⚽　Sports</a>
+</aside>
+
+<div class="main-content">
+  <div class="category-row">
+    <button class="category-chip active" data-category="all">All</button>
+    <button class="category-chip" data-category="music">Music</button>
+    <button class="category-chip" data-category="gaming">Gaming</button>
+    <button class="category-chip" data-category="education">Education</button>
+    <button class="category-chip" data-category="entertainment">Entertainment</button>
+    <button class="category-chip" data-category="sports">Sports</button>
+    <button class="category-chip" data-category="technology">Technology</button>
+    <button class="category-chip" data-category="recent">Recently uploaded</button>
+  </div>
+
+  <section id="community" class="channels-section">
+    <div class="section-title">
+      <div><h2>Channels</h2><div class="muted">Creators sharing videos on SAVID</div></div>
+    </div>
+    <div id="channelGrid" class="channel-grid">
+      <div class="empty">Loading channels...</div>
+    </div>
+  </section>
+
+  <section id="feed" class="videos-section">
+    <div class="section-title">
+      <div><h2>Recommended videos</h2><div class="muted">Discover videos from the SAVID community</div></div>
+    </div>
+    <div class="feed" id="liveVideos">
+      <div class="empty">Loading videos...</div>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer>
+  <b>SA<span>VID</span></b>
+  <span>© 2026 SAVID · Create. Connect. Share.</span>
+</footer>
+
+<dialog id="accountDialog">
+  <h2>Create your SAVID account</h2>
+  <form id="accountForm">
+    <label class="hint" for="signupName">Your name</label>
+    <input class="field" id="signupName" required maxlength="60" placeholder="Enter your name">
+    <label class="hint" for="signupEmail">Email address</label>
+    <input class="field" id="signupEmail" type="email" required placeholder="you@example.com">
+    <label class="hint" for="signupPassword">Password</label>
+    <input class="field" id="signupPassword" type="password" required minlength="6" placeholder="At least 6 characters">
+    <p class="hint" id="signupStatus" aria-live="polite"></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn outline close-dialog">Cancel</button>
+      <button class="btn" type="submit">Create account</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="loginDialog">
+  <h2>Login to SAVID</h2>
+  <form id="loginForm">
+    <label class="hint" for="loginEmail">Email address</label>
+    <input class="field" id="loginEmail" type="email" required placeholder="you@example.com">
+    <label class="hint" for="loginPassword">Password</label>
+    <input class="field" id="loginPassword" type="password" required placeholder="Your password">
+    <p class="hint" id="loginStatus" aria-live="polite"></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn outline close-dialog">Cancel</button>
+      <button class="btn" type="submit">Login</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="uploadDialog" class="upload-dialog">
+  <h2>Upload videos</h2>
+  <form id="uploadForm">
+    <label class="hint" for="videoTitle">Video title (used when uploading one video)</label>
+    <input class="field" id="videoTitle" type="text" maxlength="150" placeholder="Enter video title">
+    <label class="hint" for="videoDescription">Description (applies to all selected videos)</label>
+    <textarea class="field" id="videoDescription" rows="3" maxlength="2000" placeholder="Describe your videos"></textarea>
+    <label class="hint" for="videoFile">Choose video files (you can select multiple)</label>
+    <input class="field" id="videoFile" type="file" accept="video/*" multiple required>
+    <p class="hint">When you select multiple videos, each title is taken from its filename. Uploads are processed one by one.</p>
+    <div id="uploadProgressArea" class="upload-progress" hidden>
+      <progress id="uploadProgress" value="0" max="100"></progress>
+      <div id="uploadProgressText"></div>
+    </div>
+    <p class="hint" id="uploadStatus" aria-live="polite"></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn outline" id="cancelUpload">Cancel</button>
+      <button type="submit" class="btn" id="uploadButton">Upload videos</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const SUPABASE_URL = "https://icsswzaspmhpgqgcpqul.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_d70O2EgkINGawCBNmLvUzA_dVXNaJQZ";
+const VIDEO_BUCKET = "SVID Videos";
+
+const db = window.supabase
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
+  : null;
+
+let currentUser = null;
+let allLoadedVideos = [];
+let activeCategory = "all";
+
+const accountDialog = document.getElementById("accountDialog");
+const loginDialog = document.getElementById("loginDialog");
+const uploadDialog = document.getElementById("uploadDialog");
+
+function setStatus(id, message) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = message;
+}
+
+function showError(message) {
+  alert(message);
+}
+
+/* DIALOGS */
+document.getElementById("createAccount").addEventListener("click", () => {
+  setStatus("signupStatus", "");
+  accountDialog.showModal();
+});
+
+document.getElementById("loginButton").addEventListener("click", () => {
+  setStatus("loginStatus", "");
+  loginDialog.showModal();
+});
+
+document.getElementById("openUpload").addEventListener("click", () => {
+  if (!currentUser) {
+    setStatus("loginStatus", "Please sign in before uploading videos.");
+    loginDialog.showModal();
+    return;
+  }
+  setStatus("uploadStatus", "");
+  uploadDialog.showModal();
+});
+
+document.getElementById("cancelUpload").addEventListener("click", () => {
+  uploadDialog.close();
+});
+
+document.querySelectorAll(".close-dialog").forEach(button => {
+  button.addEventListener("click", () => {
+    accountDialog.close();
+    loginDialog.close();
+  });
+});
+
+[accountDialog, loginDialog, uploadDialog].forEach(dialog => {
+  dialog.addEventListener("click", event => {
+    if (event.target === dialog) dialog.close();
+  });
+});
+
+/* ACCOUNT CREATION */
+document.getElementById("accountForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!db) return setStatus("signupStatus", "Supabase connection is unavailable.");
+
+  const name = document.getElementById("signupName").value.trim();
+  const email = document.getElementById("signupEmail").value.trim();
+  const password = document.getElementById("signupPassword").value;
+  const button = event.target.querySelector('button[type="submit"]');
+
+  button.disabled = true;
+  setStatus("signupStatus", "Creating account...");
+
+  try {
+    const {data, error} = await db.auth.signUp({
+      email,
+      password,
+      options: {data: {display_name: name}}
+    });
+
+    if (error) throw error;
+
+    if (data.session) {
+      currentUser = data.session.user;
+      updateAccountUI();
+      accountDialog.close();
+      event.target.reset();
+      await loadVideos();
+    } else {
+      setStatus("signupStatus", "Account created. Check your email for confirmation, then log in.");
+    }
+  } catch (error) {
+    setStatus("signupStatus", error.message || "Account creation failed.");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+/* LOGIN */
+document.getElementById("loginForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  if (!db) {
+    setStatus("loginStatus", "Supabase connection is unavailable.");
+    return;
+  }
+
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const button = event.target.querySelector('button[type="submit"]');
+
+  button.disabled = true;
+  setStatus("loginStatus", "Checking your account...");
+
+  try {
+    const {data, error} = await db.auth.signInWithPassword({email, password});
+
+    if (error) throw error;
+
+    if (!data.user || !data.session) {
+      throw new Error("Login was not completed. Please try again.");
+    }
+
+    currentUser = data.user;
+    updateAccountUI();
+
+    setStatus("loginStatus", "Login successful!");
+    await loadVideos();
+
+    event.target.reset();
+    loginDialog.close();
+
+  } catch (error) {
+    setStatus("loginStatus", "Login failed: " + (error.message || "Please check your details."));
+  } finally {
+    button.disabled = false;
+  }
+});
+
+/* LOGOUT */
+document.getElementById("logoutButton").addEventListener("click", async () => {
+  if (!db) return;
+
+  const {error} = await db.auth.signOut();
+
+  if (error) {
+    showError(error.message);
+    return;
+  }
+
+  currentUser = null;
+  updateAccountUI();
+  await loadVideos();
+});
+
+function updateAccountUI() {
+  document.getElementById("createAccount").hidden = !!currentUser;
+  document.getElementById("loginButton").hidden = !!currentUser;
+  document.getElementById("logoutButton").hidden = !currentUser;
+}
+
+/* CHANNELS */
+function initials(name) {
+  return String(name || "SAVID").trim().split(/\s+/).slice(0,2)
+    .map(part => part[0] || "").join("").toUpperCase();
+}
+
+function renderChannel(channel) {
+  const card = document.createElement("article");
+  card.className = "channel-card";
+
+  const avatar = document.createElement("div");
+  avatar.className = "channel-avatar";
+  avatar.textContent = initials(channel.name);
+
+  const name = document.createElement("div");
+  name.className = "channel-name";
+  name.textContent = channel.name;
+
+  const meta = document.createElement("div");
+  meta.className = "channel-meta";
+  meta.textContent = channel.videoCount + (channel.videoCount === 1 ? " video" : " videos");
+
+  card.append(avatar, name, meta);
+  return card;
+}
+
+/* VIDEO CARD */
+function renderVideo(video) {
+  const card = document.createElement("article");
+  card.className = "card";
+  card.id = "video-" + video.id;
+
+  const player = document.createElement("video");
+  player.className = "video-card-player";
+  player.controls = true;
+  player.playsInline = true;
+  player.preload = "metadata";
+
+  const {data: urlData} = db.storage.from(VIDEO_BUCKET).getPublicUrl(video.storage_path);
+  player.src = urlData.publicUrl;
+
+  const content = document.createElement("div");
+  content.className = "card-content";
+
+  const creator = document.createElement("div");
+  creator.className = "video-creator-line";
+  creator.textContent = video.profiles?.display_name || video.profiles?.username || "SAVID creator";
+
+  const title = document.createElement("div");
+  title.className = "video-title";
+  title.textContent = video.title || "Untitled video";
+
+  const description = document.createElement("p");
+  description.className = "side-note";
+  description.textContent = video.description || "";
+
+  const actions = document.createElement("div");
+  actions.className = "video-actions";
+
+  const likeButton = document.createElement("button");
+  likeButton.className = "action-btn";
+  likeButton.type = "button";
+  likeButton.textContent = "👍 Like";
+
+  const commentButton = document.createElement("button");
+  commentButton.className = "action-btn";
+  commentButton.type = "button";
+  commentButton.textContent = "💬 Comments";
+
+  const shareButton = document.createElement("button");
+  shareButton.className = "action-btn";
+  shareButton.type = "button";
+  shareButton.textContent = "↗ Share";
+
+  const info = document.createElement("div");
+  info.className = "interaction-info";
+  info.textContent = "Loading likes and comments...";
+
+  actions.append(likeButton, commentButton, shareButton);
+
+  const commentsPanel = document.createElement("div");
+  commentsPanel.className = "comments-panel";
+
+  const commentList = document.createElement("div");
+  commentList.className = "comment-list";
+  commentList.textContent = "Open comments to view discussion.";
+
+  const commentForm = document.createElement("form");
+  commentForm.className = "comment-form";
+
+  const commentInput = document.createElement("input");
+  commentInput.type = "text";
+  commentInput.maxLength = 2000;
+  commentInput.placeholder = "Write a comment...";
+  commentInput.required = true;
+
+  const commentSend = document.createElement("button");
+  commentSend.type = "submit";
+  commentSend.textContent = "Send";
+
+  commentForm.append(commentInput, commentSend);
+  commentsPanel.append(commentList, commentForm);
+  content.append(creator, title, description, actions, info, commentsPanel);
+  card.append(player, content);
+
+  let likedByMe = false;
+  let likeCount = 0;
+
+  async function refreshCounts() {
+    const [likesResult, myLikeResult, commentsResult] = await Promise.all([
+      db.from("video_likes").select("id", {count:"exact", head:true}).eq("video_id", video.id),
+      currentUser
+        ? db.from("video_likes").select("id").eq("video_id", video.id).eq("user_id", currentUser.id).maybeSingle()
+        : Promise.resolve({data:null, error:null}),
+      db.from("video_comments").select("id", {count:"exact", head:true}).eq("video_id", video.id)
+    ]);
+
+    if (likesResult.error) console.error("Likes:", likesResult.error.message);
+    if (commentsResult.error) console.error("Comments:", commentsResult.error.message);
+
+    likeCount = likesResult.count || 0;
+    likedByMe = !!myLikeResult.data;
+
+    likeButton.textContent = (likedByMe ? "❤️ Liked " : "👍 Like ") + "(" + likeCount + ")";
+    likeButton.classList.toggle("liked", likedByMe);
+
+    const commentCount = commentsResult.count || 0;
+    commentButton.textContent = "💬 Comments (" + commentCount + ")";
+    info.textContent = likeCount + " likes · " + commentCount + " comments";
+  }
+
+  likeButton.addEventListener("click", async () => {
+    if (!currentUser) {
+      setStatus("loginStatus", "Please log in to like videos.");
+      loginDialog.showModal();
+      return;
+    }
+
+    likeButton.disabled = true;
+
+    try {
+      if (likedByMe) {
+        const {error} = await db.from("video_likes").delete()
+          .eq("video_id", video.id).eq("user_id", currentUser.id);
+        if (error) throw error;
+      } else {
+        const {error} = await db.from("video_likes").insert({
+          video_id: video.id,
+          user_id: currentUser.id
+        });
+        if (error) throw error;
+      }
+
+      await refreshCounts();
+    } catch (error) {
+      showError("Like failed: " + error.message);
+    } finally {
+      likeButton.disabled = false;
+    }
+  });
+
+  async function loadComments() {
+    commentList.replaceChildren();
+
+    const {data, error} = await db.from("video_comments")
+      .select("id,user_id,content,created_at")
+      .eq("video_id", video.id)
+      .order("created_at", {ascending:true});
+
+    if (error) {
+      commentList.textContent = "Could not load comments: " + error.message;
+      return;
+    }
+
+    if (!data || !data.length) {
+      commentList.textContent = "No comments yet. Be the first to comment.";
+      return;
+    }
+
+    data.forEach(comment => {
+      const item = document.createElement("div");
+      item.className = "comment-item";
+
+      const author = document.createElement("div");
+      author.className = "comment-author";
+      author.textContent = comment.user_id === currentUser?.id ? "You" : "SAVID member";
+
+      const body = document.createElement("div");
+      body.textContent = comment.content;
+
+      item.append(author, body);
+      commentList.appendChild(item);
+    });
+  }
+
+  commentButton.addEventListener("click", async () => {
+    commentsPanel.classList.toggle("open");
+    if (commentsPanel.classList.contains("open")) await loadComments();
+  });
+
+  commentForm.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    if (!currentUser) {
+      setStatus("loginStatus", "Please log in to comment.");
+      loginDialog.showModal();
+      return;
+    }
+
+    const text = commentInput.value.trim();
+    if (!text) return;
+
+    commentSend.disabled = true;
+
+    try {
+      const {error} = await db.from("video_comments").insert({
+        video_id: video.id,
+        user_id: currentUser.id,
+        content: text
+      });
+
+      if (error) throw error;
+
+      commentInput.value = "";
+      await loadComments();
+      await refreshCounts();
+    } catch (error) {
+      showError("Comment failed: " + error.message);
+    } finally {
+      commentSend.disabled = false;
+    }
+  });
+
+  shareButton.addEventListener("click", async () => {
+    const link = new URL(window.location.href);
+    link.hash = "video-" + video.id;
+
+    try {
+      await navigator.clipboard.writeText(link.href);
+      shareButton.textContent = "✓ Link copied";
+      setTimeout(() => shareButton.textContent = "↗ Share", 2000);
+    } catch {
+      window.prompt("Copy this video link:", link.href);
+    }
+  });
+
+  refreshCounts();
+  return card;
+}
+
+/* SEARCH AND CATEGORY FILTER */
+function refreshVideoFeed() {
+  const q = (document.getElementById("videoSearch").value || "").trim().toLowerCase();
+
+  let list = allLoadedVideos.filter(video => {
+    const text = [
+      video.title, video.description,
+      video.profiles?.display_name, video.profiles?.username
+    ].join(" ").toLowerCase();
+
+    const matchesSearch = !q || text.includes(q);
+    const matchesCategory = activeCategory === "all" ||
+      activeCategory === "recent" || text.includes(activeCategory);
+
+    return matchesSearch && matchesCategory;
+  });
+
+  if (activeCategory === "recent") {
+    list = [...list].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+  }
+
+  const feed = document.getElementById("liveVideos");
+  feed.replaceChildren();
+
+  if (!list.length) {
+    const note = document.createElement("div");
+    note.className = "empty";
+    note.textContent = "No videos match your search.";
+    feed.appendChild(note);
+    return;
+  }
+
+  list.forEach(video => feed.appendChild(renderVideo(video)));
+}
+
+document.getElementById("searchForm").addEventListener("submit", event => {
+  event.preventDefault();
+  refreshVideoFeed();
+});
+
+document.getElementById("videoSearch").addEventListener("input", refreshVideoFeed);
+
+document.querySelectorAll(".category-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll(".category-chip").forEach(item => item.classList.remove("active"));
+    chip.classList.add("active");
+    activeCategory = chip.dataset.category;
+    refreshVideoFeed();
+  });
+});
+
+/* SIDEBAR MENU */
+document.getElementById("sidebarToggle").addEventListener("click", () => {
+  document.getElementById("leftSidebar").classList.toggle("open");
+});
+
+/* LOAD VIDEOS */
+async function loadVideos() {
+  const feed = document.getElementById("liveVideos");
+  const channels = document.getElementById("channelGrid");
+
+  feed.replaceChildren();
+  channels.replaceChildren();
+  allLoadedVideos = [];
+
+  if (!db) {
+    feed.textContent = "Supabase connection is unavailable.";
+    return;
+  }
+
+  const {data, error} = await db.from("videos")
+    .select("id,user_id,title,description,storage_path,created_at,profiles!videos_user_id_fkey(display_name,username)")
+    .order("created_at", {ascending:false});
+
+  if (error) {
+    const note = document.createElement("div");
+    note.className = "empty";
+    note.textContent = "Could not load SAVID videos: " + error.message;
+    feed.appendChild(note);
+    channels.appendChild(note.cloneNode(true));
+    return;
+  }
+
+  if (!data || !data.length) {
+    const note = document.createElement("div");
+    note.className = "empty";
+    note.textContent = "No videos have been uploaded yet.";
+    feed.appendChild(note);
+    channels.appendChild(note.cloneNode(true));
+    return;
+  }
+
+  const channelMap = new Map();
+
+  data.forEach(video => {
+    const profile = video.profiles || {};
+    const channelName = profile.display_name || profile.username || "SAVID creator";
+    const key = video.user_id || channelName;
+
+    if (!channelMap.has(key)) {
+      channelMap.set(key, {name:channelName, videoCount:0});
+    }
+
+    channelMap.get(key).videoCount++;
+  });
+
+  channelMap.forEach(channel => channels.appendChild(renderChannel(channel)));
+
+  allLoadedVideos = data;
+  refreshVideoFeed();
+}
+
+/* MULTIPLE VIDEO UPLOAD */
+document.getElementById("uploadForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  if (!db || !currentUser) {
+    setStatus("uploadStatus", "Please log in first.");
+    return;
+  }
+
+  const files = Array.from(document.getElementById("videoFile").files || []);
+  const enteredTitle = document.getElementById("videoTitle").value.trim();
+  const description = document.getElementById("videoDescription").value.trim();
+
+  if (!files.length) {
+    setStatus("uploadStatus", "Choose at least one video.");
+    return;
+  }
+
+  const invalidFile = files.find(file => !file.type.startsWith("video/"));
+
+  if (invalidFile) {
+    setStatus("uploadStatus", "One of the selected files is not a video: " + invalidFile.name);
+    return;
+  }
+
+  const button = document.getElementById("uploadButton");
+  const progressArea = document.getElementById("uploadProgressArea");
+  const progress = document.getElementById("uploadProgress");
+  const progressText = document.getElementById("uploadProgressText");
+
+  button.disabled = true;
+  progressArea.hidden = false;
+  progress.value = 0;
+
+  let uploaded = 0;
+  let failed = [];
+
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      progressText.textContent = "Uploading " + (i + 1) + " of " + files.length + ": " + file.name;
+      setStatus("uploadStatus", "Please keep this page open while uploading.");
+
+      const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = currentUser.id + "/" + crypto.randomUUID() + "-" + cleanName;
+
+      const {error: uploadError} = await db.storage.from(VIDEO_BUCKET).upload(path, file, {
+        contentType: file.type,
+        upsert: false
+      });
+
+      if (uploadError) {
+        failed.push(file.name + ": " + uploadError.message);
+        continue;
+      }
+
+      const generatedTitle = file.name.replace(/\.[^/.]+$/, "");
+      const videoTitle = files.length === 1
+        ? (enteredTitle || generatedTitle)
+        : generatedTitle;
+
+      const {error: insertError} = await db.from("videos").insert({
+        user_id: currentUser.id,
+        title: videoTitle,
+        description,
+        storage_path: path
+      });
+
+      if (insertError) {
+        failed.push(file.name + ": uploaded file but database save failed: " + insertError.message);
+        continue;
+      }
+
+      uploaded++;
+      progress.value = Math.round(((i + 1) / files.length) * 100);
+    }
+
+    progress.value = 100;
+    progressText.textContent = uploaded + " of " + files.length + " videos saved.";
+
+    if (failed.length) {
+      setStatus("uploadStatus", uploaded + " uploaded successfully. " + failed.length + " failed: " + failed.join(" | "));
+    } else {
+      setStatus("uploadStatus", "All " + uploaded + " videos uploaded successfully!");
+    }
+
+    await loadVideos();
+
+    if (!failed.length) {
+      event.target.reset();
+      setTimeout(() => uploadDialog.close(), 1800);
+    }
+  } catch (error) {
+    setStatus("uploadStatus", "Upload error: " + (error.message || "Unknown error"));
+  } finally {
+    button.disabled = false;
+  }
+});
+
+/* START APP */
+async function startSAVID() {
+  if (!db) {
+    updateAccountUI();
+    return;
+  }
+
+  const {data, error} = await db.auth.getSession();
+
+  if (error) console.error("Session error:", error.message);
+
+  currentUser = data?.session?.user || null;
+  updateAccountUI();
+
+  await loadVideos();
+
+  db.auth.onAuthStateChange((_event, session) => {
+    currentUser = session?.user || null;
+    updateAccountUI();
+    setTimeout(() => loadVideos(), 0);
+  });
+}
+
+startSAVID();
+</script>
+</body>
+</html>
